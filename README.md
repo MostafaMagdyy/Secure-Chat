@@ -15,7 +15,7 @@ The algorithm implementation involves the following steps:
    - Compute the shared secret using DH.
    
 2. **ElGamal Digital Signature**:
-   - Generate ElGamal parameters (q, α) from a file simulating being publicly accessed.
+   - Read ElGamal parameters (q, α) from a file simulating being publicly accessed.
    - Generate public/private key pairs for ElGamal.
    - Sign DH public keys with ElGamal digital signature.
    - Verify signatures to ensure authenticity and close the connection if not verified.
