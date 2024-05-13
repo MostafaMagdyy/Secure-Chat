@@ -1,20 +1,31 @@
 import socket
-import os
 import utils
 import threading
-
 def send_messages(client_socket, AES_key):
-    while True:
-        message = input()
-        print("Sent Message:", message)
-        encrypted_message = utils.encrypt_message(message, AES_key)
-        utils.send_encrypted_message(client_socket, encrypted_message)
-
+    try:
+        while True:
+            message = input()
+            print("Sent Message:", message)
+            encrypted_message = utils.encrypt_message(message, AES_key)
+            print("Sent Message Encrypted:", encrypted_message)
+            utils.send_encrypted_message(client_socket, encrypted_message)
+    except (EOFError, ConnectionAbortedError):
+        print("Connection terminated by Server.")
+    except (ConnectionResetError):
+        print("Connection terminated by Client.")
 def receive_messages(client_socket, AES_key):
-    while True:
-        received_message = utils.receive_encrypted_message(client_socket)
-        decrypted_message = utils.decrypt_message(received_message, AES_key)
-        print("Received Message:", decrypted_message)
+    try:
+        while True:
+            received_message = utils.receive_encrypted_message(client_socket)
+            print("Received Message:", received_message)
+
+            decrypted_message = utils.decrypt_message(received_message, AES_key)
+            # remove whitespaces
+            decrypted_message = decrypted_message.strip()
+
+            print("Received Message Decrypted:", decrypted_message)
+    except (EOFError,ConnectionResetError,ConnectionAbortedError):
+        pass
 
 def main():
     qDH = 0
@@ -53,10 +64,10 @@ def main():
         print(f"Client Response: {client_response}")
 
         utils.send_string(client_socket, "hello from the server")
-        client_YAGL = utils.receive_long_value(client_socket)
+        client_YAGL = utils.receive_long(client_socket)
         print(f"Client EL Gamal Key: {client_YAGL}")
 
-        utils.send_long_value(client_socket, YAGL)
+        utils.send_value(client_socket, YAGL)
 
         signature = utils.compute_el_gamal_signature(YADH, qGL, alphaGL, XAGL)
         S1, S2 = signature
@@ -65,9 +76,9 @@ def main():
 
         data_to_send = f"{YADH},{S1},{S2}"
         utils.send_string(client_socket, data_to_send)
-
-        
-
+        received_data = utils.receive_string(client_socket)
+        if(received_data=="Invalid signature. Connection terminated"):
+                raise ValueError("Invalid Server Signature. Connection terminated.")
         received_data = utils.receive_string(client_socket)
         client_YADH, client_S1, client_S2 = map(int, received_data.split(','))
 
@@ -77,9 +88,10 @@ def main():
         if not is_valid_signature:
             utils.send_string(client_socket, "Invalid signature. Connection terminated.")
             server_socket.close()
-            print("Invalid signature. Connection terminated.")
-            
-         
+            raise ValueError("Invalid Client Signature. Connection terminated.")
+        else :
+                utils.send_string(client_socket, "Valid Client signature.")
+
         Shared_Key=utils.compute_shared_key(client_YADH,XADH,qDH)
         print("Server Shared key:",Shared_Key)
         AES_Key=utils.generate_aes_key(Shared_Key)
@@ -96,7 +108,7 @@ def main():
         receive_thread.join()     
 
     except KeyboardInterrupt:
-        print("Keyboard interrupt detected. Exiting gracefully.")
+        pass
     except Exception as e:
         print(e)
 

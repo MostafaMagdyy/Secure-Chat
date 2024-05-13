@@ -5,12 +5,19 @@ from math import gcd
 
 
 
+def extended_gcd(a, b):
+    if a == 0:
+        return (b, 0, 1)
+    else:
+        gcd, x, y = extended_gcd(b % a, a)
+        return (gcd, y - (b // a) * x, x)
+
 def mod_inverse(a, m):
-    a = a % m
-    for x in range(1, m):
-        if (a * x) % m == 1:
-            return x
-    return 1
+    gcd, x, y = extended_gcd(a, m)
+    if gcd != 1:
+        raise ValueError('Modular inverse does not exist')
+    else:
+        return x % m
 
 def generate_private_key(q):
     while True:
@@ -23,19 +30,17 @@ def hash_to_integer(M, q):
     return hash_integer % q
 
 def compute_el_gamal_signature(M, q, alpha, XA):
+    
     m = hash_to_integer(M, q)
-
     while True:
         k = random.randint(1, q - 1)
         if 0 < k < q and gcd(k, q - 1) == 1:
             break
-
     S1 = pow(alpha, k, q)
     k_inverse = mod_inverse(k, q - 1)
     S2 = (m - XA * S1) * k_inverse % (q - 1)
     if S2 < 0:
         S2 += q - 1
-
     return S1, S2
 
 def mod_pow(base, exponent, modulus):
@@ -59,7 +64,7 @@ def generate_aes_key(shared_key):
 
     return aes_key
 
-def send_long_value(socket, value):
+def send_value(socket, value):
     try:
         socket.send(str(value).encode())
     except Exception as e:
@@ -71,16 +76,16 @@ def send_string(socket, message):
     except Exception as e:
         print(e)
 
-def receive_long_value(socket):
+def receive_long(socket):
     try:
-        return int(socket.recv(1024).decode())
+        return int(socket.recv(4096).decode())
     except Exception as e:
         print(e)
         return -1
 
 def receive_string(socket):
     try:
-        return socket.recv(1024).decode()
+        return socket.recv(4096).decode()
     except Exception as e:
         print(e)
         return None
